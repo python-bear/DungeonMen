@@ -133,14 +133,14 @@ full_hearts = {}
 knight_skins = {}
 item_sprites = {}
 knights = monsters = players = used_monster_skins = []
-wall_sprite = coin_sprite = dungeon_theme = None
+wall_sprite = penny_sprite = dungeon_theme = None
 fruit_names = ("apple", "beetroot", "cherries", "mushroom", "pumpkin", "raddish")
 knight_skin_names = ("arch", "crud", "diab", "dom", "holy", "maji", "mega", "rusty", "shov", "shy", "syth", "wrak")
 monster_skin_names = ("behold", "chopper", "demo", "ender", "gruff", "lich", "neo", "orc", "robe", "spider", "zomb")
 empty_heart = scale_image(load_img(f"lib\\sprites\\hearts\\empty_heart.png"), HEART_SIZE)
 shield_heart = scale_image(load_img(f"lib\\sprites\\hearts\\shield_heart.png"), HEART_SIZE)
 item_codes = {
-    "coin": 1,
+    "coin": 2,
     "random_fruit": 3,
     "random_buff": 4,
     "raddish": 5,
@@ -149,6 +149,9 @@ item_codes = {
     "apple": 8,
     "cherries": 9,
     "beetroot": 10,
+    "gold": 11,
+    "gem": 12,
+    "silver": 13,
 }
 
 

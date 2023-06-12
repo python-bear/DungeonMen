@@ -80,7 +80,7 @@ class Knight(pygame.sprite.Sprite):
     def lose_life(self, num):
         if self.retreat_countdown == 0 and self.shield_countdown == 0:
             self.hp = min(max(self.hp - num, 0), 3)
-            self.retreat_countdown = fps * 2
+            self.retreat_countdown = fps * 3
             self.has_retreat_shield = True
         self.update_hearts()
 

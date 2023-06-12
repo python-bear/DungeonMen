@@ -34,15 +34,15 @@ def init_dungeon(player_ids, num_monsters, override_monster_skins=None):
     num_monsters: The number of monsters to be in the dungeon.
     override_monster_skins: The skins that will be used for the monsters, if None, all will be used.
     """
-    global knights, monsters, wall_sprite, coin_sprite, dungeon_theme, players, full_hearts, used_monster_skins
+    global knights, monsters, wall_sprite, penny_sprite, dungeon_theme, players, full_hearts, used_monster_skins
 
     # Dungeon setup.
     dungeon_theme = random.choice(('light', 'dark'))
 
     wall_sprite = load_img(f"lib\\sprites\\environ\\{dungeon_theme}\\wall_{random.randint(0, 14)}.png")
     wall_sprite = scale_image(wall_sprite)
-    coin_sprite = load_img(f"lib\\sprites\\items\\coin.png")
-    coin_sprite = scale_image(coin_sprite)
+    penny_sprite = load_img(f"lib\\sprites\\items\\penny.png")
+    penny_sprite = scale_image(penny_sprite)
 
     # Get the fruit sprites loaded.
     for fruit in fruit_names:
@@ -122,14 +122,14 @@ def draw_screen():
             else:
                 draw_rectangle(screen, x, y, WALL_THICKNESS - WALL_GAP, WALL_THICKNESS - WALL_GAP)
 
-        elif tile == 1:
-            if coin_sprite:
-                screen.blit(coin_sprite, (x, y))
+        elif tile == 2:
+            if penny_sprite:
+                screen.blit(penny_sprite, (x, y))
 
             else:
                 draw_circle(screen, x + HALF_WALL_THICKNESS, y + HALF_WALL_THICKNESS, 5)
 
-        elif tile not in (2, 3, 4):
+        elif tile not in (1, 3, 4):
             screen.blit(item_sprites[key_from_value(item_codes, tile)], (x + 3, y + 3))
 
     # Draw the scores and player names.
@@ -167,38 +167,38 @@ def update_positions():
 
         knight_pos_index = tile_snap(knight.x, knight.y)
 
-        # Check for knight pellet collisions.
+        # Check for knight item/coin collisions.
         if knight.retreat_countdown == 0:
-            if current_map[knight_pos_index] == 1:
-                current_map[knight_pos_index] = 2
+            if current_map[knight_pos_index] == 2:
+                current_map[knight_pos_index] = 1
                 knight.score += 1
 
             elif current_map[knight_pos_index] == 5:
-                current_map[knight_pos_index] = 2
+                current_map[knight_pos_index] = 1
                 knight.score += 10
 
             elif current_map[knight_pos_index] == 6:
-                current_map[knight_pos_index] = 2
+                current_map[knight_pos_index] = 1
                 knight.speed /= 2
 
             elif current_map[knight_pos_index] == 7:
-                current_map[knight_pos_index] = 2
+                current_map[knight_pos_index] = 1
                 knight.speed /= 2
                 for monster in monsters:
                     monster.speed /= 2
 
             elif current_map[knight_pos_index] == 8:
-                current_map[knight_pos_index] = 2
-                knight.shield_countdown = fps * 5
+                current_map[knight_pos_index] = 1
+                knight.shield_countdown = fps * 7
                 knight.has_shield = True
                 knight.update_hearts()
 
             elif current_map[knight_pos_index] == 9:
-                current_map[knight_pos_index] = 2
+                current_map[knight_pos_index] = 1
                 knight.speed *= 2
 
             elif current_map[knight_pos_index] == 10:
-                current_map[knight_pos_index] = 2
+                current_map[knight_pos_index] = 1
                 knight.score += random.randint(-10, 20)
 
     # Update the monsters.
