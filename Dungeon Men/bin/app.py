@@ -226,7 +226,8 @@ def update_positions(do_mobile_collision_detection=True, do_wall_collision_detec
             elif current_map[knight_pos_index] == 5:
                 current_map[knight_pos_index] = 1
                 if random.randint(0, 1):
-                    knight.score += random_number_faded()
+                    knight.score += random.choice([1, 10, 10, 10, 10, 10, 10, 10, 10, 10, 20, 20, 20, 20, 20, 30, 30,
+                                                  30, 40, 50])
                 else:
                     knight.luck_effects.append([fps * 5, "* 2"])
 

@@ -212,12 +212,6 @@ def movement_options(movement_speed):
     return [(movement_speed, 0), (-movement_speed, 0), (0, movement_speed), (0, -movement_speed)]
 
 
-def random_number_faded(highest=40):
-    x = random.uniform(0, 1)
-    y = -math.log(1 - x)
-    return int(math.floor(y * highest) + 1)
-
-
 class Wall(pygame.sprite.Sprite):
     def __init__(self, x, y):
         super().__init__()
