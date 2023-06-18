@@ -1,4 +1,4 @@
-from bin import testing
+from bin import app
 
 
-testing.run()
+app.run()

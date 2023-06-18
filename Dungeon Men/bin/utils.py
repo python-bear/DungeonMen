@@ -1,4 +1,3 @@
-from lib.maps import maps
 import random
 import os
 import math
@@ -33,11 +32,17 @@ SCREEN_HEIGHT = SIDEBAR_HEIGHT if SIDEBAR_WIDTH > DUNGEON_HEIGHT else DUNGEON_HE
 
 screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
 
+program_icon = pygame.image.load("lib\\sprites\\gui\\icon_5.png")
+pygame.display.set_icon(program_icon)
+
 # Misc setup.
 alkhemikal_font = pygame.font.Font("lib\\fonts\\alkhemikal\\Alkhemikal.ttf", 31)
 fps = 64
 quarter_fps = fps // 4
-current_map = maps[0]
+current_map = None
+current_walls = None
+wall_collision_detection = False
+mobile_collision_detection = True
 
 # Basic color constants setup.
 BLACK = (0, 0, 0)
@@ -48,7 +53,27 @@ AQUA = (0, 255, 255)
 BLUE = (0, 0, 255)
 MAGENTA = (255, 0, 255)
 WHITE = (255, 255, 255)
+
 SHIELD_BLUE = (73, 122, 200, 128)
+L_TAN = (238, 175, 123)
+TAN = (200, 140, 97)
+BROWN = (51, 34, 22)
+P_1_COL = (146, 15, 240)
+P_2_COL = (240, 34, 15)
+P_3_COL = (109, 240, 15)
+P_4_COL = (15, 221, 240)
+
+# Speed conversions
+speed_conversions = {
+    "snail": WALL_THICKNESS // 22,
+    "slow": WALL_THICKNESS // 19,
+    "medium": WALL_THICKNESS // 16,
+    "fast": WALL_THICKNESS // 8,
+    "flash": WALL_THICKNESS // 4
+}
+
+# Songs
+pygame.mixer.music.load("lib\\sounds\\music\\vafen.wav")
 
 
 def round_to(num, nearest, non=None):
@@ -62,6 +87,10 @@ def round_to(num, nearest, non=None):
             rounded_num += nearest
 
         return rounded_num
+
+
+def remove_all(iterable, target):
+    return [i for i in iterable if i != target]
 
 
 def draw_rectangle(screen, x, y, width=WALL_THICKNESS, height=WALL_THICKNESS, color=RED):
@@ -96,14 +125,45 @@ def tile_snap(x, y):
     return None
 
 
-def is_valid_movement(x, y, mx, my):
-    # Returns true if a coordinate is a valid position for a mobile.
-    index = tile_snap(x + mx, y + my)
+def create_walls(map_data):
+    walls = []
+    width = 20  # Width of the map
+    height = len(map_data) // width
 
-    if current_map[index] == 0:
-        return False
+    for i in range(len(map_data)):
+        x = i % width
+        y = i // width
 
-    return True
+        if map_data[i] == 0:
+            wall = Wall(x, y)
+            walls.append(wall)
+
+    return walls
+
+
+def is_valid_movement(x, y, mx, my, movement_speed, map_data=None, walls=None):
+    # Returns True if a coordinate is a valid position for a mobile.
+    if walls is not None:
+        char_dim = CHAR_SIZE * 7
+        future_x = x + mx * movement_speed
+        future_y = y + my * movement_speed
+
+        # Calculate the bounding box for the mobile's future position
+        mobile_rect = pygame.Rect(future_x - char_dim / 2, future_y - char_dim / 2, char_dim, char_dim)
+
+        # Check for collision with walls
+        for wall in walls:
+            if mobile_rect.colliderect(wall.rect):
+                return False
+
+        return True
+    elif map_data is not None:
+        index = tile_snap(x + mx, y + my)
+
+        if map_data[index] == 0:
+            return False
+
+        return True
 
 
 def key_from_value(dictionary, value):
@@ -111,6 +171,26 @@ def key_from_value(dictionary, value):
         if val == value:
             return key
     raise ValueError("Value not found in the dictionary")
+
+
+def change_img_hue(image, hue):
+    img_copy = image.copy()
+    pixels = pygame.PixelArray(img_copy)
+    # Iterate over every pixel
+    for x in range(img_copy.get_width()):
+        for y in range(img_copy.get_height()):
+            # Turn the pixel data into an RGB tuple
+            rgb = img_copy.unmap_rgb(pixels[x][y])
+            # Get a new color object using the RGB tuple and convert to HSLA
+            color = pygame.Color(*rgb)
+            h, s, l, a = color.hsla
+            # Add 120 to the hue (or however much you want) and wrap to under 360
+            color.hsla = (int(h) + 120) % 360, int(s), int(l), int(a)
+            # Assign directly to the pixel
+            pixels[x][y] = color
+    # The old way of closing a PixelArray object
+    del pixels
+    return img_copy
 
 
 def load_img(image_name, allow_alpha=False):
@@ -128,136 +208,59 @@ def scale_image(image, scale=2):
     return scaled_image
 
 
+def movement_options(movement_speed):
+    return [(movement_speed, 0), (-movement_speed, 0), (0, movement_speed), (0, -movement_speed)]
+
+
+def random_number_faded(highest=40):
+    x = random.uniform(0, 1)
+    y = -math.log(1 - x)
+    return int(math.floor(y * highest) + 1)
+
+
+class Wall(pygame.sprite.Sprite):
+    def __init__(self, x, y):
+        super().__init__()
+        self.image = pygame.Surface((WALL_THICKNESS, WALL_THICKNESS))
+        self.rect = self.image.get_rect()
+        self.rect.topleft = (x * WALL_THICKNESS, y * WALL_THICKNESS)
+
+
 # Dungeon vars.
 full_hearts = {}
 knight_skins = {}
+true_knight_skins = {}
+alt_knight_skins = {}
 item_sprites = {}
-knights = monsters = players = used_monster_skins = []
-wall_sprite = penny_sprite = dungeon_theme = None
-fruit_names = ("apple", "beetroot", "cherries", "mushroom", "pumpkin", "raddish")
-knight_skin_names = ("arch", "crud", "diab", "dom", "holy", "maji", "mega", "rusty", "shov", "shy", "syth", "wrak")
+monsters = players = used_monster_skins = []
+wall_sprite = dungeon_theme = None
+fruit_names = ("apple", "beetroot", "cherries", "mushroom", "pumpkin", "radish", "gem")
+knight_skin_names = ("arch", "andy", "diab", "dom", "syth", "crud", "kirb", "maji", "mega", "pink", "holy", "wrak",
+                     "shov", "shy", "rusty")
 monster_skin_names = ("behold", "chopper", "demo", "ender", "gruff", "lich", "neo", "orc", "robe", "spider", "zomb")
 empty_heart = scale_image(load_img(f"lib\\sprites\\hearts\\empty_heart.png"), HEART_SIZE)
 shield_heart = scale_image(load_img(f"lib\\sprites\\hearts\\shield_heart.png"), HEART_SIZE)
+penny_sprite = scale_image(load_img(f"lib\\sprites\\items\\penny.png"))
+gold_sprite = scale_image(load_img(f"lib\\sprites\\items\\gold.png"))
+silver_sprite = scale_image(load_img(f"lib\\sprites\\items\\coin.png"))
+gem_sprite = scale_image(load_img(f"lib\\sprites\\items\\gem.png"))
 item_codes = {
     "coin": 2,
     "random_fruit": 3,
     "random_buff": 4,
-    "raddish": 5,
+    "radish": 5,
     "pumpkin": 6,
     "mushroom": 7,
     "apple": 8,
     "cherries": 9,
     "beetroot": 10,
-    "gold": 11,
-    "gem": 12,
+    "gem": 11,
+    "gold": 12,
     "silver": 13,
 }
 
-
-class Cursor(pygame.sprite.Sprite):
-    def __init__(self, x, y):
-        super().__init__()
-
-        # Set up the sprite sheet for the cursor.
-        self.sprite_index = 0
-        self.sprites = []
-        for i in range(0, 4):
-            self.sprites.append(load_img(f"lib\\sprites\\mouse\\torch_{i}.png"))
-
-        self.image = self.sprites[self.sprite_index]
-        self.rect = self.image.get_rect()
-        self.click_sound = pygame.mixer.Sound("lib\\sounds\\sfx\\click.wav")
-
-    def increment_sprite(self):
-        # Goes to the next sprite in the animation every 1/4 fps rounds.
-        self.sprite_index += 1
-
-        if self.sprite_index >= 4 * quarter_fps:
-            self.sprite_index = 0
-
-        self.image = self.sprites[self.sprite_index // quarter_fps]
-
-    def click(self):
-        self.click_sound.play()
-
-    def update(self):
-        self.rect.center = pygame.mouse.get_pos()
-        self.increment_sprite()
-
-
-# The following is from stackoverflow @ 
-# https://stackoverflow.com/questions/32590131/pygame-blitting-text-with-an-escape-character-or-newline
-class TextRectException:
-    def __init__(self, message=None):
-        self.message = message
-
-    def __str__(self):
-        return self.message
-
-
-def multi_line_text(string: str, fnt, rect, fg_col, bg_col=None, justification=0):
-    """
-    Returns a surface containing the passed text string, reformatted
-    to fit within the given rect, word-wrapping as necessary. The text
-    will be anti-aliased.
-
-    Parameters
-    ----------
-    string - the text you wish to render. \n begins a new line.
-    fnt - a font object
-    rect - a rect style giving the size of the surface requested.
-    fg_col - a three-byte tuple of the rgb value of the text color. ex (0, 0, 0) = BLACK
-    bg_col - a three-byte tuple of the rgb value of the background color.
-    justification - 0 (default) left-justified, 1 horizontally centered, 2 right-justified
-
-    Returns
-    -------
-    Success - a surface object with the text rendered onto it.
-    Failure - raises a TextRectException if the text won't fit onto the surface.
-    """
-
-    final_text = []
-    original_text = string.splitlines()
-    # Create a series of lines that will fit on the provided rectangle.
-    for original_line in original_text:
-        if fnt.size(original_line)[0] > rect.width:
-            words = original_line.split(' ')
-            # if any of our words are too long to fit, return.
-            for word in words:
-                if fnt.size(word)[0] >= rect.width:
-                    raise TextRectException("The word " + word + " is too long to fit in the rect passed.")
-            # Start a new line
-            added_lines = ""
-            for word in words:
-                nest_lines = added_lines + word + " "
-                # Build the line while the words fit.
-                if fnt.size(nest_lines)[0] < rect.width:
-                    added_lines = nest_lines
-                else:
-                    final_text.append(added_lines)
-                    added_lines = word + " "
-            final_text.append(added_lines)
-        else:
-            final_text.append(original_line)
-
-    # Let's try to write the text out on the surface.
-    surface = pygame.Surface(rect.size, pygame.SRCALPHA)  # Use SRCALPHA to enable transparency
-    total_height = 0
-    for line in final_text:
-        if total_height + fnt.size(line)[1] >= rect.height:
-            raise TextRectException("Once word-wrapped, the text string was too tall to fit in the rect.")
-        temp_surface = None
-        if line != "":
-            temp_surface = fnt.render(line, True, fg_col)  # Enable anti-aliasing with True
-        if temp_surface is not None:
-            if justification == 0:
-                surface.blit(temp_surface, (0, total_height))
-            elif justification == 1:
-                surface.blit(temp_surface, ((rect.width - temp_surface.get_width()) // 2, total_height))
-            elif justification == 2:
-                surface.blit(temp_surface, (rect.width - temp_surface.get_width(), total_height))
-            else:
-                raise TextRectException("Invalid justification argument: " + str(justification))
-        total_height += fnt.size(line)[1]
-    return surface
+# Knight setup and creation.
+for skin in knight_skin_names:
+    true_knight_skins[skin] = scale_image(load_img(f"lib\\sprites\\helms\\{skin}_helm.png"), 1)
+    knight_skins[skin] = scale_image(load_img(f"lib\\sprites\\helms\\{skin}_helm.png"), CHAR_SIZE)
+    alt_knight_skins[skin] = change_img_hue(knight_skins[skin], 90)
