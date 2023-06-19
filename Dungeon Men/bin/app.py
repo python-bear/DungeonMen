@@ -67,13 +67,14 @@ def reset_dungeon():
     knights = pygame.sprite.Group()
 
 
-def init_dungeon(player_ids, num_monsters, override_monster_skins=None):
+def init_dungeon(player_ids, num_monsters, override_monster_skins=None, among_us=False):
     """
     Parameters
     ----------
     player_ids: A list of player name, skin tuples, up to for, one for each player.
     num_monsters: The number of monsters to be in the dungeon.
     override_monster_skins: The skins that will be used for the monsters, if None, all will be used.
+    among_us: Whether or not to do among us skins for enemies
     """
     global knights, monsters, wall_sprite, penny_sprite, dungeon_theme, players, full_hearts, used_monster_skins, \
         game_paused, current_map
@@ -109,7 +110,7 @@ def init_dungeon(player_ids, num_monsters, override_monster_skins=None):
 
     # Create randomized monsters.
     for i in range(num_monsters):
-        monsters.add(Monster(random.randint(9, 10), 9, random.choice(used_monster_skins), MOVEMENT_SPEED))
+        monsters.add(Monster(random.randint(9, 10), 9, random.choice(used_monster_skins), MOVEMENT_SPEED, among_us))
 
     for monster in monsters:
         monster.choose_random_move()
@@ -118,10 +119,16 @@ def init_dungeon(player_ids, num_monsters, override_monster_skins=None):
     for i, v in enumerate(current_map):
         if v == 3:
             current_map[i] = item_codes[random.choice(fruit_names)]
+        elif v == 2:
+            item_choice = random.randint(1, 30)
+            if item_choice == 30:
+                current_map[i] = item_codes["gold"]
+            elif item_choice > 25:
+                current_map[i] = item_codes["silver"]
 
 
 def draw_screen():
-    global current_map
+    global current_map, banana_time
 
     screen.blit(background, (0, 0))
 
@@ -155,6 +162,9 @@ def draw_screen():
 
             elif tile == 2:
                 screen.blit(penny_sprite, (x, y))
+
+            elif banana_time and tile != 1:
+                screen.blit(banana_sprite, (x + 3, y + 3))
 
             elif tile == 11:
                 screen.blit(gem_sprite, (x, y))
@@ -263,6 +273,14 @@ def update_positions(do_mobile_collision_detection=True, do_wall_collision_detec
                 current_map[knight_pos_index] = 1
                 knight.luck_effects.append([fps * 5, "* 2"])
 
+            elif current_map[knight_pos_index] == 12:
+                current_map[knight_pos_index] = 1
+                knight.score += 3 * knight.luck
+
+            elif current_map[knight_pos_index] == 13:
+                current_map[knight_pos_index] = 1
+                knight.score += 2 * knight.luck
+
     # Update the monsters.
     for monster in monsters:
         if do_wall_collision_detection:
@@ -312,7 +330,7 @@ def update_positions(do_mobile_collision_detection=True, do_wall_collision_detec
 
 
 def run_dungeon_frame():
-    global game_state, mobile_collision_detection, wall_collision_detection
+    global game_state, mobile_collision_detection, wall_collision_detection, music_is_paused
 
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
@@ -327,6 +345,15 @@ def run_dungeon_frame():
             # Check to restart the game
             if (event.key == pygame.K_SPACE or event.key == pygame.K_RETURN) and game_paused:
                 game_state = 'start menu'
+
+            # Pause and play music
+            elif event.key == pygame.K_RCTRL or event.key == pygame.K_LCTRL:
+                if music_is_paused:
+                    pygame.mixer.music.play()
+                    music_is_paused = False
+                else:
+                    music_is_paused = True
+                    pygame.mixer.music.pause()
 
             # Gets the different movements for each knight.
             for knight in knights:
@@ -375,7 +402,7 @@ def run_dungeon_frame():
 
 def start_menu_to_dungeon():
     global game_state, enter_dungeon_button, screen, program_icon, MOVEMENT_SPEED, speed_conversions, \
-        wall_collision_detection, mobile_collision_detection
+        wall_collision_detection, mobile_collision_detection, banana_time
 
     # Starts the dungeon/game
     try:
@@ -403,15 +430,35 @@ def start_menu_to_dungeon():
                           enumerate(input_boxes[:-1])]
     player_attribs = [attrib for attrib in player_attribs_raw if attrib[0] != ""]
 
-    enter_dungeon_button.clicked = False
-    init_dungeon(player_attribs, num_monsters,
-                 [random.choice(monster_skin_names), random.choice(monster_skin_names)])
+    # Among us music
+    banana_time = among_us = False
+    for i in range(len(player_attribs)):
+        if player_attribs[i][0].lower().strip() in ("sus", "sussy", "among", "bussy", "crew"):
+            among_us = True
 
+        elif player_attribs[i][0].lower().strip() in ("james", "bnn", "tran"):
+            banana_time = True
+
+        elif player_attribs[i][0].lower().strip().replace("4", "a") in ("andy", "kirra", "mgirl", "ander"):
+            player_attribs[i][1] = "andy"
+
+        elif player_attribs[i][0].lower().strip() in ("kirb", "kirby", "kobe"):
+            player_attribs[i][1] = "kirb"
+
+    if among_us:
+        pygame.mixer.music.load("lib\\sounds\\music\\Hide n Seek Impostor.wav")
+        pygame.mixer.music.set_volume(0.6)
+        pygame.mixer.music.play(-1)
+
+    init_dungeon(player_attribs, num_monsters, [random.choice(monster_skin_names), random.choice(monster_skin_names)],
+                 among_us)
+
+    enter_dungeon_button.clicked = False
     game_state = 'game'
 
 
 def run_start_menu_frame():
-    global game_state, enter_dungeon_button, screen, program_icon, MOVEMENT_SPEED
+    global game_state, enter_dungeon_button, screen, program_icon, MOVEMENT_SPEED, music_is_paused
 
     event_list = pygame.event.get()
     for event in event_list:
@@ -428,7 +475,16 @@ def run_start_menu_frame():
             if event.key == pygame.K_RETURN:
                 start_menu_to_dungeon()
 
-            if pygame.K_1 <= event.key <= pygame.K_8:
+            # Pause and play music
+            elif event.key == pygame.K_RCTRL or event.key == pygame.K_LCTRL:
+                if music_is_paused:
+                    pygame.mixer.music.play()
+                    music_is_paused = False
+                else:
+                    music_is_paused = True
+                    pygame.mixer.music.pause()
+
+            elif pygame.K_1 <= event.key <= pygame.K_8:
                 number = event.key - pygame.K_1
                 program_icon = pygame.image.load(f"lib\\sprites\\gui\\icon_{number}.png")
                 pygame.display.set_icon(program_icon)
@@ -443,22 +499,16 @@ def run_start_menu_frame():
         start_menu_to_dungeon()
 
 
-def run_main_menu_frame():
-    pass
-
-
 def run():
     global frame_index, game_state
 
-    # pygame.mixer.music.set_volume(0.3)
-    # pygame.mixer.music.play(-1)
+    pygame.mixer.music.set_volume(0.3)
+    pygame.mixer.music.play(-1)
 
     while run_app:
         draw_screen()
         if game_state == 'game':
             run_dungeon_frame()
-        elif game_state == 'main menu':
-            run_main_menu_frame()
         elif game_state == 'start menu':
             run_start_menu_frame()
 

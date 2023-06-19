@@ -229,8 +229,9 @@ item_sprites = {}
 monsters = players = used_monster_skins = []
 wall_sprite = dungeon_theme = None
 fruit_names = ("apple", "beetroot", "cherries", "mushroom", "pumpkin", "radish", "gem")
-knight_skin_names = ("arch", "andy", "diab", "dom", "syth", "crud", "kirb", "maji", "mega", "pink", "holy", "wrak",
+knight_skin_names = ("arch", "skul", "diab", "dom", "syth", "crud", "plag", "maji", "mega", "pink", "holy", "wrak",
                      "shov", "shy", "rusty")
+secret_knight_skin_names = ("andy", "kirb")
 monster_skin_names = ("behold", "chopper", "demo", "ender", "gruff", "lich", "neo", "orc", "robe", "spider", "zomb")
 empty_heart = scale_image(load_img(f"lib\\sprites\\hearts\\empty_heart.png"), HEART_SIZE)
 shield_heart = scale_image(load_img(f"lib\\sprites\\hearts\\shield_heart.png"), HEART_SIZE)
@@ -238,6 +239,9 @@ penny_sprite = scale_image(load_img(f"lib\\sprites\\items\\penny.png"))
 gold_sprite = scale_image(load_img(f"lib\\sprites\\items\\gold.png"))
 silver_sprite = scale_image(load_img(f"lib\\sprites\\items\\coin.png"))
 gem_sprite = scale_image(load_img(f"lib\\sprites\\items\\gem.png"))
+banana_sprite = scale_image(load_img(f"lib\\sprites\\items\\banana.png"), CHAR_SIZE)
+banana_time = False
+music_is_paused = False
 item_codes = {
     "coin": 2,
     "random_fruit": 3,
@@ -254,7 +258,12 @@ item_codes = {
 }
 
 # Knight setup and creation.
-for skin in knight_skin_names:
+for skin in (*knight_skin_names, *secret_knight_skin_names):
     true_knight_skins[skin] = scale_image(load_img(f"lib\\sprites\\helms\\{skin}_helm.png"), 1)
     knight_skins[skin] = scale_image(load_img(f"lib\\sprites\\helms\\{skin}_helm.png"), CHAR_SIZE)
     alt_knight_skins[skin] = change_img_hue(knight_skins[skin], 90)
+
+# Get among us skins loaded.
+among_us_skins = []
+for i in range(0, 6):
+    among_us_skins.append(scale_image(load_img(f"lib\\sprites\\enemies\\among_{i}.png"), CHAR_SIZE))

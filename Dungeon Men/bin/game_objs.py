@@ -145,9 +145,10 @@ class Knight(pygame.sprite.Sprite):
 
 
 class Monster(pygame.sprite.Sprite):
-    def __init__(self, x, y, skin, movement_speed):
+    def __init__(self, x, y, skin, movement_speed, use_among_us):
         super().__init__()
 
+        self.use_among_us = use_among_us
         self.movement_speed = movement_speed
         self.skin = skin
         self.x = WALL_THICKNESS * x + HALF_WALL_THICKNESS
@@ -156,6 +157,7 @@ class Monster(pygame.sprite.Sprite):
         self.my = 0
         self.speed = 1
         self.speed_effects = []  # full of: (countdown, effect)
+        self.among_us_index = random.randint(0, 5)
 
         self.sprite = scale_image(load_img(f"lib\\sprites\\enemies\\{self.skin}.png"), CHAR_SIZE)
         self.rect = self.sprite.get_rect()
@@ -186,7 +188,10 @@ class Monster(pygame.sprite.Sprite):
         # Draws itself on the screen.
         half_rect_width = self.rect.width // 2
         half_rect_height = self.rect.height // 2
-        screen.blit(self.sprite, (self.x - half_rect_width - 2, self.y - half_rect_height - 2))
+        if self.use_among_us:
+            screen.blit(among_us_skins[self.among_us_index], (self.x - half_rect_width - 2, self.y - half_rect_height - 2))
+        else:
+            screen.blit(self.sprite, (self.x - half_rect_width - 2, self.y - half_rect_height - 2))
 
         # Update effects
         self.update_speed_effects()
