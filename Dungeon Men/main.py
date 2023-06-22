@@ -1,4 +1,5 @@
-from bin import app
+from bin.app import *
 
 
-app.run()
+dungeon_men_app = Application()
+dungeon_men_app.run()

@@ -43,10 +43,10 @@ class Button:
 class InputBox:
     def __init__(self, x, y, w, h=32, text='', bg=(255, 255, 255), max_text_len=5, allowed_chars=None):
         self.rect = pygame.Rect(x, y, w, h)
-        self.color = TAN
+        self.color = COLORS["tan"]
         self.max_text_len = max_text_len
         self.text = text
-        self.txt_surface = alkhemikal_font.render(text, True, BROWN)
+        self.txt_surface = ALKHEMIKAL_FNT.render(text, True, COLORS["brown"])
         self.active = False
         self.bg_color = bg
         self.allowed_chars = allowed_chars
@@ -57,7 +57,7 @@ class InputBox:
                 self.active = not self.active
             else:
                 self.active = False
-            self.color = L_TAN if self.active else TAN
+            self.color = COLORS["l_tan"] if self.active else COLORS["tan"]
         if event.type == pygame.KEYDOWN:
             if self.active:
                 if event.key == pygame.K_BACKSPACE:
@@ -68,7 +68,7 @@ class InputBox:
                             self.text += event.unicode
                         elif event.unicode in self.allowed_chars:
                             self.text += event.unicode
-                self.txt_surface = alkhemikal_font.render(self.text[:self.max_text_len], True, BROWN)
+                self.txt_surface = ALKHEMIKAL_FNT.render(self.text[:self.max_text_len], True, COLORS["brown"])
 
         if len(self.text) > self.max_text_len:
             self.text = self.text[:self.max_text_len]
@@ -80,7 +80,7 @@ class InputBox:
 
 
 class Cursor(pygame.sprite.Sprite):
-    def __init__(self, x, y):
+    def __init__(self, fps):
         super().__init__()
 
         # Set up the sprite sheet for the cursor.
@@ -92,15 +92,17 @@ class Cursor(pygame.sprite.Sprite):
         self.image = self.sprites[self.sprite_index]
         self.rect = self.image.get_rect()
         self.click_sound = pygame.mixer.Sound("lib\\sounds\\sfx\\click.wav")
+        self.fps = fps
+        self.quarter_fps = self.fps // 4
 
     def increment_sprite(self):
         # Goes to the next sprite in the animation every 1/4 fps rounds.
         self.sprite_index += 1
 
-        if self.sprite_index >= 4 * quarter_fps:
+        if self.sprite_index >= 4 * self.quarter_fps:
             self.sprite_index = 0
 
-        self.image = self.sprites[self.sprite_index // quarter_fps]
+        self.image = self.sprites[self.sprite_index // self.quarter_fps]
 
     def click(self):
         self.click_sound.play()
@@ -111,13 +113,13 @@ class Cursor(pygame.sprite.Sprite):
 
 
 class SkinSelector:
-    def __init__(self, surface, skins=knight_skin_names, skins_per_row=5):
+    def __init__(self, surface, skins, screen_width, screen_height, true_knight_skins, skins_per_row=5):
         self.screen = surface
         self.skins = skins
         self.skin_surfaces = []
         self.skins_per_row = skins_per_row
         self.selected_skins = [0, 4, 10, 14]
-        self.selected_colors = [P_1_COL, P_2_COL, P_3_COL, P_4_COL]
+        self.selected_colors = [COLORS['p_1'], COLORS['p_2'], COLORS['p_3'], COLORS['p_4']]
         self.num_of_rows = len(self.skins) // self.skins_per_row
         self.skin_width = 60
         self.skin_height = 60
@@ -127,20 +129,23 @@ class SkinSelector:
         self.positions = []
         self.skin_surfaces = []
         self.active_player = 0
+        self.SCREEN_WIDTH = screen_width
+        self.SCREEN_HEIGHT = screen_height
+        self.true_knight_skins = true_knight_skins
 
         # Load the skin images and create surface objects
         for s in self.skins:
-            skin_surface = scale_image(true_knight_skins[s], 6)
+            skin_surface = scale_image(self.true_knight_skins[s], 6)
             self.skin_surfaces.append(skin_surface)
 
         # Calculate the positions of each skin in the grid
         for i in range(len(self.skins)):
             row = i // self.skins_per_row
             col = i % self.skins_per_row
-            x = col * (self.skin_width + self.margin) + 40 + (SCREEN_WIDTH - (self.skins_per_row * (self.skin_width +
-                                                                                                    self.margin))) // 2
-            y = row * (self.skin_height + self.margin) + 50 + (SCREEN_HEIGHT - (self.num_of_rows * (self.skin_height +
-                                                                                                    self.margin))) // 2
+            x = col * (self.skin_width + self.margin) + 40 + \
+                (self.SCREEN_WIDTH - (self.skins_per_row * (self.skin_width + self.margin))) // 2
+            y = row * (self.skin_height + self.margin) + 50 + \
+                (self.SCREEN_HEIGHT - (self.num_of_rows * (self.skin_height + self.margin))) // 2
             self.positions.append((x, y))
 
     def draw(self):
@@ -170,7 +175,7 @@ class SkinSelector:
 # The following is from StackOverflow @
 # https://stackoverflow.com/questions/19877900/tips-on-adding-creating-a-drop-down-selection-box-in-pygame
 class OptionBox:
-    def __init__(self, x, y, w, h, option_list, color=TAN, highlight_color=L_TAN, selected=0):
+    def __init__(self, x, y, w, h, option_list, color=COLORS["tan"], highlight_color=COLORS["l_tan"], selected=0):
         self.color = color
         self.highlight_color = highlight_color
         self.rect = pygame.Rect(x, y, w, h)
@@ -182,8 +187,8 @@ class OptionBox:
 
     def draw(self, surface):
         pygame.draw.rect(surface, self.highlight_color if self.menu_active else self.color, self.rect)
-        pygame.draw.rect(surface, BROWN, self.rect, 5)
-        msg = alkhemikal_font.render(self.option_list[self.selected], 1, BROWN)
+        pygame.draw.rect(surface, COLORS["brown"], self.rect, 5)
+        msg = ALKHEMIKAL_FNT.render(self.option_list[self.selected], 1, COLORS["brown"])
         surface.blit(msg, msg.get_rect(center=self.rect.center))
 
         if self.draw_menu:
@@ -191,12 +196,12 @@ class OptionBox:
                 rect = self.rect.copy()
                 rect.y -= (i + 1) * self.rect.height  # Subtract instead of adding
                 pygame.draw.rect(surface, self.highlight_color if i == self.active_option else self.color, rect)
-                msg = alkhemikal_font.render(text, 1, BROWN)
+                msg = ALKHEMIKAL_FNT.render(text, 1, COLORS["brown"])
                 surface.blit(msg, msg.get_rect(center=rect.center))
             outer_rect = (
                 self.rect.x, self.rect.y - self.rect.height * len(self.option_list), self.rect.width,
                 self.rect.height * len(self.option_list))
-            pygame.draw.rect(surface, BROWN, outer_rect, 2)
+            pygame.draw.rect(surface, COLORS["brown"], outer_rect, 2)
 
     def update(self, event_list):
         mpos = pygame.mouse.get_pos()

@@ -2,17 +2,20 @@ from bin.utils import *
 
 
 class Heart(pygame.sprite.Sprite):
-    def __init__(self, pos, skin):
+    def __init__(self, pos, image):
         super().__init__()
-        self.image = full_hearts[skin]
+        self.image = image
         self.rect = self.image.get_rect()
         self.rect.topleft = pos
 
 
 class Knight(pygame.sprite.Sprite):
-    def __init__(self, x, y, name, player_id, skin):
+    def __init__(self, screen, x, y, name, player_id, skin, wall_thickness, fps, knight_skins, dungeon_width,
+                 heart_spacing, alt_knight_skins, shield_heart, full_hearts, empty_heart):
         super().__init__()
 
+        self.SCREEN = screen
+        self.fps = fps
         self.name = name
         self.skin = skin
         self.player_id = player_id
@@ -26,20 +29,28 @@ class Knight(pygame.sprite.Sprite):
         self.luck_effects = []  # full of: (countdown, effect)
         self.luck = 1
         self.score = 0
-        self.x = WALL_THICKNESS * x + HALF_WALL_THICKNESS
-        self.y = WALL_THICKNESS * y + HALF_WALL_THICKNESS
+        self.WALL_THICKNESS = wall_thickness
+        self.x = self.WALL_THICKNESS * x + self.WALL_THICKNESS // 2
+        self.y = self.WALL_THICKNESS * y + self.WALL_THICKNESS // 2
         self.mx = 0
         self.my = 0
+        self.knight_skins = knight_skins
+        self.alt_knight_skins = alt_knight_skins
+        self.DUNGEON_WIDTH = dungeon_width
+        self.HEART_SPACING = heart_spacing
+        self.shield_heart = shield_heart
+        self.full_hearts = full_hearts
+        self.empty_heart = empty_heart
 
         self.sprite = knight_skins[self.skin]
         self.rect = self.sprite.get_rect()
         self.mask = pygame.mask.from_surface(self.sprite)
 
         self.hearts = pygame.sprite.Group()
-        heart_positions = [(DUNGEON_WIDTH + WALL_THICKNESS + i * 30,
-                            HEART_SPACING * (1 + 2 * (self.player_id - 1))) for i in range(self.hp)]
+        heart_positions = [(self.DUNGEON_WIDTH + self.WALL_THICKNESS + i * 30,
+                            self.HEART_SPACING * (1 + 2 * (self.player_id - 1))) for i in range(self.hp)]
         for position in heart_positions:
-            self.hearts.add(Heart(position, self.skin))
+            self.hearts.add(Heart(position, self.full_hearts[self.skin]))
 
     def change_movement(self, x, y):
         # Change knight movement direction.
@@ -60,8 +71,8 @@ class Knight(pygame.sprite.Sprite):
 
             # Create a surface for the circle
             circle_surface = pygame.Surface((circle_radius * 2, circle_radius * 2), pygame.SRCALPHA)
-            pygame.draw.circle(circle_surface, SHIELD_BLUE, (circle_radius, circle_radius), circle_radius)
-            screen.blit(circle_surface, circle_pos)
+            pygame.draw.circle(circle_surface, COLORS["shield_blue"], (circle_radius, circle_radius), circle_radius)
+            self.SCREEN.blit(circle_surface, circle_pos)
 
         if self.has_retreat_shield and self.retreat_countdown == 0:
             self.has_retreat_shield = False
@@ -72,12 +83,13 @@ class Knight(pygame.sprite.Sprite):
             self.update_hearts()
 
         if len(self.luck_effects) != 0:
-            screen.blit(alt_knight_skins[self.skin], (self.x - half_rect_width - 2, self.y - half_rect_height - 2))
+            self.SCREEN.blit(self.alt_knight_skins[self.skin],
+                             (self.x - half_rect_width - 2, self.y - half_rect_height - 2))
         else:
-            screen.blit(self.sprite, (self.x - half_rect_width - 2, self.y - half_rect_height - 2))
+            self.SCREEN.blit(self.sprite, (self.x - half_rect_width - 2, self.y - half_rect_height - 2))
 
         # Draw hearts
-        self.hearts.draw(screen)
+        self.hearts.draw(self.SCREEN)
 
         # Updates retreat countdown and other countdowns
         self.shield_countdown = max(self.shield_countdown - 1, 0)
@@ -115,52 +127,57 @@ class Knight(pygame.sprite.Sprite):
     def lose_life(self, num):
         if self.retreat_countdown == 0 and self.shield_countdown == 0:
             self.hp = min(max(self.hp - num, 0), 3)
-            self.retreat_countdown = fps * 3
+            self.retreat_countdown = self.fps * 3
             self.has_retreat_shield = True
         self.update_hearts()
 
     def update_hearts(self):
         # Update hearts
         for heart in self.hearts:
-            heart.image = empty_heart
+            heart.image = self.empty_heart
 
         if self.hp >= 1:
             if self.shield_countdown != 0:
-                self.hearts.sprites()[0].image = shield_heart
+                self.hearts.sprites()[0].image = self.shield_heart
             else:
-                self.hearts.sprites()[0].image = full_hearts[self.skin]
+                self.hearts.sprites()[0].image = self.full_hearts[self.skin]
             if self.has_retreat_shield:
-                self.hearts.sprites()[1].image = shield_heart
+                self.hearts.sprites()[1].image = self.shield_heart
         if self.hp >= 2:
             if self.shield_countdown != 0:
-                self.hearts.sprites()[1].image = shield_heart
+                self.hearts.sprites()[1].image = self.shield_heart
             else:
-                self.hearts.sprites()[1].image = full_hearts[self.skin]
+                self.hearts.sprites()[1].image = self.full_hearts[self.skin]
             if self.has_retreat_shield:
-                self.hearts.sprites()[2].image = shield_heart
+                self.hearts.sprites()[2].image = self.shield_heart
         if self.hp == 3:
             if self.shield_countdown != 0:
-                self.hearts.sprites()[2].image = shield_heart
+                self.hearts.sprites()[2].image = self.shield_heart
             else:
-                self.hearts.sprites()[2].image = full_hearts[self.skin]
+                self.hearts.sprites()[2].image = self.full_hearts[self.skin]
 
 
 class Monster(pygame.sprite.Sprite):
-    def __init__(self, x, y, skin, movement_speed, use_among_us):
+    def __init__(self, screen, x, y, skin, movement_speed, wall_thickness, char_size, use_among_us,
+                 among_us_skins=None):
         super().__init__()
 
+        self.SCREEN = screen
         self.use_among_us = use_among_us
         self.movement_speed = movement_speed
+        self.AMONG_US_SKINS = among_us_skins
         self.skin = skin
-        self.x = WALL_THICKNESS * x + HALF_WALL_THICKNESS
-        self.y = WALL_THICKNESS * y + HALF_WALL_THICKNESS
+        self.CHAR_SIZE = char_size
+        self.WALL_THICKNESS = wall_thickness
+        self.x = self.WALL_THICKNESS * x + self.WALL_THICKNESS // 2
+        self.y = self.WALL_THICKNESS * y + self.WALL_THICKNESS // 2
         self.mx = 0
         self.my = 0
         self.speed = 1
         self.speed_effects = []  # full of: (countdown, effect)
         self.among_us_index = random.randint(0, 5)
 
-        self.sprite = scale_image(load_img(f"lib\\sprites\\enemies\\{self.skin}.png"), CHAR_SIZE)
+        self.sprite = scale_image(load_img(f"lib\\sprites\\enemies\\{self.skin}.png"), self.CHAR_SIZE)
         self.rect = self.sprite.get_rect()
         self.mask = pygame.mask.from_surface(self.sprite)
 
@@ -194,9 +211,10 @@ class Monster(pygame.sprite.Sprite):
         half_rect_width = self.rect.width // 2
         half_rect_height = self.rect.height // 2
         if self.use_among_us:
-            screen.blit(among_us_skins[self.among_us_index], (self.x - half_rect_width - 2, self.y - half_rect_height - 2))
+            self.SCREEN.blit(self.AMONG_US_SKINS[self.among_us_index],
+                             (self.x - half_rect_width - 2, self.y - half_rect_height - 2))
         else:
-            screen.blit(self.sprite, (self.x - half_rect_width - 2, self.y - half_rect_height - 2))
+            self.SCREEN.blit(self.sprite, (self.x - half_rect_width - 2, self.y - half_rect_height - 2))
 
         # Update effects
         self.update_speed_effects()
