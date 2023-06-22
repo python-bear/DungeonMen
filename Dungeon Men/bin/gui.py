@@ -113,33 +113,34 @@ class Cursor(pygame.sprite.Sprite):
 
 
 class SkinSelector:
-    def __init__(self, surface, skins, screen_width, screen_height, true_knight_skins, skins_per_row=5):
+    def __init__(self, surface, skins, screen_width, screen_height, skins_per_row=5):
         self.screen = surface
         self.skins = skins
         self.skin_surfaces = []
         self.skins_per_row = skins_per_row
         self.selected_skins = [0, 4, 10, 14]
         self.selected_colors = [COLORS['p_1'], COLORS['p_2'], COLORS['p_3'], COLORS['p_4']]
-        self.num_of_rows = len(self.skins) // self.skins_per_row
+        self.num_of_rows = len(self.skins[0]) // self.skins_per_row
         self.skin_width = 60
         self.skin_height = 60
         self.select_width = self.skin_width + 10
         self.select_height = self.skin_height + 10
         self.margin = 70
         self.positions = []
-        self.skin_surfaces = []
+        self.skin_surfaces = [[], []]
         self.active_player = 0
         self.SCREEN_WIDTH = screen_width
         self.SCREEN_HEIGHT = screen_height
-        self.true_knight_skins = true_knight_skins
+        self.show_alts = False
 
         # Load the skin images and create surface objects
-        for s in self.skins:
-            skin_surface = scale_image(self.true_knight_skins[s], 6)
-            self.skin_surfaces.append(skin_surface)
+        for i in range(len(self.skins)):
+            for s in self.skins[i].values():
+                skin_surface = scale_image(s, 6)
+                self.skin_surfaces[i].append(skin_surface)
 
         # Calculate the positions of each skin in the grid
-        for i in range(len(self.skins)):
+        for i in range(len(self.skins[0])):
             row = i // self.skins_per_row
             col = i % self.skins_per_row
             x = col * (self.skin_width + self.margin) + 40 + \
@@ -150,7 +151,7 @@ class SkinSelector:
 
     def draw(self):
         # Display the skins on the screen
-        for i, skin_surface in enumerate(self.skin_surfaces):
+        for i, skin_surface in enumerate(self.skin_surfaces[self.show_alts]):
             x, y = self.positions[i]
             if i in self.selected_skins:
                 draw_rectangle(self.screen, x - 5, y - 5, self.select_width,
@@ -158,7 +159,7 @@ class SkinSelector:
             self.screen.blit(skin_surface, (x, y))
 
     def handle_mouse_click(self, position):
-        for i, skin_surface in enumerate(self.skin_surfaces):
+        for i, skin_surface in enumerate(self.skin_surfaces[self.show_alts]):
             x, y = self.positions[i]
             rect = pygame.Rect(x, y, self.skin_width, self.skin_height)
             if i not in self.selected_skins:
@@ -170,6 +171,16 @@ class SkinSelector:
                 # Change active skin
                 if rect.collidepoint(position):
                     self.active_player = self.selected_skins.index(i)
+
+    def handle_event(self, event):
+        if event.type == pygame.MOUSEBUTTONDOWN:
+            self.handle_mouse_click(pygame.mouse.get_pos())
+        if event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_LALT:
+                self.show_alts = True
+        if event.type == pygame.KEYUP:
+            if event.key == pygame.K_LALT:
+                self.show_alts = False
 
 
 # The following is from StackOverflow @

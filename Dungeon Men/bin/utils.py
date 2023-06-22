@@ -9,7 +9,7 @@ import pygame
 
 pygame.mixer.pre_init(44100, 16, 2, 4096)
 pygame.init()
-pygame.event.set_allowed([pygame.QUIT, pygame.KEYDOWN, pygame.MOUSEBUTTONDOWN])
+pygame.event.set_allowed([pygame.QUIT, pygame.KEYDOWN, pygame.KEYUP, pygame.MOUSEBUTTONDOWN])
 
 # Font setup.
 ALKHEMIKAL_FNT = pygame.font.Font("lib\\fonts\\alkhemikal\\Alkhemikal.ttf", 31)
@@ -178,6 +178,14 @@ def play_video(file_path):
 
     elif os.name == 'posix':  # for Linux/Mac OS
         os.system(f'open "{file_path}"')
+
+
+def remove_key_value_pairs(data_list, keys_to_remove):
+    result = []
+    for data in data_list:
+        new_data = {k: v for k, v in data.items() if k not in keys_to_remove}
+        result.append(new_data)
+    return result
 
 
 class Wall(pygame.sprite.Sprite):

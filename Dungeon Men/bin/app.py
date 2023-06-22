@@ -77,10 +77,13 @@ class Application:
         }
 
         # Dungeon variables.
-        self.full_hearts = {}
-        self.knight_skins = {}
-        self.true_knight_skins = {}
-        self.alt_knight_skins = {}
+        self.HEART_SPRITES = {}
+        self.KNIGHT_SKINS = {
+            "1": [{}, {}],
+            "1.5": [{}, {}],
+            "2": [{}, {}],
+            "2.5": [{}, {}],
+        }
         self.item_sprites = {}
         self.monsters = []
         self.players = []
@@ -88,14 +91,12 @@ class Application:
         self.knights = pygame.sprite.Group()
         self.wall_sprite = None
         self.dungeon_theme = None
-        self.fruit_names = ("apple", "beetroot", "cherries", "mushroom", "pumpkin", "radish", "gem")
-        self.knight_skin_names = ("arch", "skul", "diab", "dom", "syth", "crud", "plag", "maji", "mega", "pink", "holy",
+        self.SPECIAL_ITEM_NAMES = ("apple", "beetroot", "cherries", "mushroom", "pumpkin", "radish", "gem")
+        self.KNIGHT_SKIN_NAMES = ("arch", "skul", "diab", "dom", "syth", "crud", "plag", "maji", "mega", "pink", "holy",
                                   "wrak", "shov", "shy", "rusty")
-        self.secret_knight_skin_names = ("andy", "kirb", "ngor", "spawn", "gpt")
-        self.monster_skin_names = ("behold", "chopper", "demo", "ender", "gruff", "lich", "neo", "orc", "robe",
+        self.SECRET_KNIGHT_SKIN_NAMES = ("andy", "kirb", "ngor", "spawn", "gpt")
+        self.MONSTER_SKIN_NAMES = ("behold", "chopper", "demo", "ender", "gruff", "lich", "neo", "orc", "robe",
                                    "spider", "zomb")
-        self.empty_heart = scale_image(load_img(f"lib\\sprites\\hearts\\empty_heart.png"), self.HEART_SIZE)
-        self.shield_heart = scale_image(load_img(f"lib\\sprites\\hearts\\shield_heart.png"), self.HEART_SIZE)
         self.penny_sprite = scale_image(load_img(f"lib\\sprites\\items\\penny.png"))
         self.gold_sprite = scale_image(load_img(f"lib\\sprites\\items\\gold.png"))
         self.silver_sprite = scale_image(load_img(f"lib\\sprites\\items\\coin.png"))
@@ -105,7 +106,7 @@ class Application:
         self.rabbit_of_caerbannog = False
         self.among_us = False
         self.music_is_paused = False
-        self.item_codes = {
+        self.ITEM_CODES = {
             "coin": 2,
             "random_fruit": 3,
             "random_buff": 4,
@@ -121,10 +122,18 @@ class Application:
         }
 
         # Knight setup and creation.
-        for skin in (*self.knight_skin_names, *self.secret_knight_skin_names):
-            self.true_knight_skins[skin] = scale_image(load_img(f"lib\\sprites\\helms\\{skin}_helm.png"), 1)
-            self.knight_skins[skin] = scale_image(load_img(f"lib\\sprites\\helms\\{skin}_helm.png"), self.CHAR_SIZE)
-            self.alt_knight_skins[skin] = change_img_hue(self.knight_skins[skin])
+        for skin in (*self.KNIGHT_SKIN_NAMES, *self.SECRET_KNIGHT_SKIN_NAMES):
+            for size in self.POSSIBLE_CHAR_SIZES:
+                self.KNIGHT_SKINS[f"{size}"][0][skin] = scale_image(load_img(f"lib\\sprites\\helms\\{skin}_helm.png"),
+                                                                    size)
+                self.KNIGHT_SKINS[f"{size}"][1][skin] = change_img_hue(self.KNIGHT_SKINS[f"{size}"][0][skin])
+
+            # Setup heart sprites.
+            self.HEART_SPRITES[skin] = scale_image(load_img(f"lib\\sprites\\hearts\\{skin}_heart.png"), self.HEART_SIZE)
+
+        for sprite in ("empty", "shield"):
+            self.HEART_SPRITES[sprite] = scale_image(load_img(f"lib\\sprites\\hearts\\{sprite}_heart.png"),
+                                                     self.HEART_SIZE)
 
         # Get among us skins loaded.
         self.among_us_skins = []
@@ -155,8 +164,12 @@ class Application:
                           self.SCREEN_HEIGHT - self.WALL_THICKNESS * 2.3 - 1, 190, 54,
                           ("all precise", "precise mobs", "precise walls", "none precise"), selected=1),
             ]
-            self.skin_selector = SkinSelector(self.SCREEN, self.knight_skin_names, self.SCREEN_WIDTH,
-                                              self.SCREEN_HEIGHT, self.true_knight_skins)
+
+            self.skin_selector = SkinSelector(self.SCREEN, remove_key_value_pairs(self.KNIGHT_SKINS["1"],
+                                                                                  self.SECRET_KNIGHT_SKIN_NAMES),
+                                              self.SCREEN_WIDTH, self.SCREEN_HEIGHT)
+
+            self.run()
 
     def run(self):
         pygame.mixer.music.play(-1)
@@ -198,34 +211,43 @@ class Application:
         self.reset_dungeon()
 
         # Get the fruit sprites loaded.
-        for fruit in self.fruit_names:
+        for fruit in self.SPECIAL_ITEM_NAMES:
             self.item_sprites[fruit] = scale_image(load_img(f"lib\\sprites\\items\\{fruit}.png"), self.CHAR_SIZE)
 
         # Create knights for all of the players.
         for i in range(len(player_ids)):
-            self.full_hearts[player_ids[i][1]] = scale_image(load_img(f"lib\\sprites\\hearts\\{player_ids[i][1]}"
-                                                                      f"_heart.png"),
-                                                             self.HEART_SIZE)
             if i + 1 == 1:
                 self.knights.add(Knight(self.SCREEN, 1, 1, player_ids[i][0], 1, player_ids[i][1], self.WALL_THICKNESS,
-                                        self.fps, self.knight_skins, self.DUNGEON_WIDTH, self.HEART_SPACING,
-                                        self.alt_knight_skins, self.shield_heart, self.full_hearts, self.empty_heart))
+                                        self.fps, self.KNIGHT_SKINS[f"{self.CHAR_SIZE}"][0][player_ids[i][1]],
+                                        self.DUNGEON_WIDTH, self.HEART_SPACING,
+                                        self.KNIGHT_SKINS[f"{self.CHAR_SIZE}"][1][player_ids[i][1]],
+                                        self.HEART_SPRITES["shield"], self.HEART_SPRITES[player_ids[i][1]],
+                                        self.HEART_SPRITES["empty"]))
             elif i + 1 == 2:
                 self.knights.add(Knight(self.SCREEN, 18, 18, player_ids[i][0], 2, player_ids[i][1], self.WALL_THICKNESS,
-                                        self.fps, self.knight_skins, self.DUNGEON_WIDTH, self.HEART_SPACING,
-                                        self.alt_knight_skins, self.shield_heart, self.full_hearts, self.empty_heart))
+                                        self.fps, self.KNIGHT_SKINS[f"{self.CHAR_SIZE}"][0][player_ids[i][1]],
+                                        self.DUNGEON_WIDTH, self.HEART_SPACING,
+                                        self.KNIGHT_SKINS[f"{self.CHAR_SIZE}"][1][player_ids[i][1]],
+                                        self.HEART_SPRITES["shield"], self.HEART_SPRITES[player_ids[i][1]],
+                                        self.HEART_SPRITES["empty"]))
             elif i + 1 == 3:
                 self.knights.add(Knight(self.SCREEN, 1, 18, player_ids[i][0], 3, player_ids[i][1], self.WALL_THICKNESS,
-                                        self.fps, self.knight_skins, self.DUNGEON_WIDTH, self.HEART_SPACING,
-                                        self.alt_knight_skins, self.shield_heart, self.full_hearts, self.empty_heart))
+                                        self.fps, self.KNIGHT_SKINS[f"{self.CHAR_SIZE}"][0][player_ids[i][1]],
+                                        self.DUNGEON_WIDTH, self.HEART_SPACING,
+                                        self.KNIGHT_SKINS[f"{self.CHAR_SIZE}"][1][player_ids[i][1]],
+                                        self.HEART_SPRITES["shield"], self.HEART_SPRITES[player_ids[i][1]],
+                                        self.HEART_SPRITES["empty"]))
             else:
                 self.knights.add(Knight(self.SCREEN, 18, 1, player_ids[i][0], 4, player_ids[i][1], self.WALL_THICKNESS,
-                                        self.fps, self.knight_skins, self.DUNGEON_WIDTH, self.HEART_SPACING,
-                                        self.alt_knight_skins, self.shield_heart, self.full_hearts, self.empty_heart))
+                                        self.fps, self.KNIGHT_SKINS[f"{self.CHAR_SIZE}"][0][player_ids[i][1]],
+                                        self.DUNGEON_WIDTH, self.HEART_SPACING,
+                                        self.KNIGHT_SKINS[f"{self.CHAR_SIZE}"][1][player_ids[i][1]],
+                                        self.HEART_SPRITES["shield"], self.HEART_SPRITES[player_ids[i][1]],
+                                        self.HEART_SPRITES["empty"]))
 
         # Monster setup and creation.
         if override_monster_skins is None:
-            used_monster_skins = self.monster_skin_names
+            used_monster_skins = self.MONSTER_SKIN_NAMES
 
         elif rabbit_of_caerbannog:
             used_monster_skins = ["rabbit_of_caerbannog"]
@@ -237,8 +259,8 @@ class Application:
         # Create randomized monsters.
         for i in range(num_monsters):
             self.monsters.add(Monster(self.SCREEN, random.randint(9, 10), 9, random.choice(used_monster_skins),
-                                 self.MOVEMENT_SPEED, self.WALL_THICKNESS, self.CHAR_SIZE, among_us,
-                                 self.among_us_skins))
+                                      self.MOVEMENT_SPEED, self.WALL_THICKNESS, self.CHAR_SIZE, among_us,
+                                      self.among_us_skins))
 
         for monster in self.monsters:
             monster.choose_random_move()
@@ -246,13 +268,13 @@ class Application:
         # Randomize the items.
         for i, v in enumerate(self.current_map):
             if v == 3:
-                self.current_map[i] = self.item_codes[random.choice(self.fruit_names)]
+                self.current_map[i] = self.ITEM_CODES[random.choice(self.SPECIAL_ITEM_NAMES)]
             elif v == 2:
                 item_choice = random.randint(1, 30)
                 if item_choice == 30:
-                    self.current_map[i] = self.item_codes["gold"]
+                    self.current_map[i] = self.ITEM_CODES["gold"]
                 elif item_choice > 25:
-                    self.current_map[i] = self.item_codes["silver"]
+                    self.current_map[i] = self.ITEM_CODES["silver"]
 
     def draw_screen(self):
         self.SCREEN.blit(self.background, (0, 0))
@@ -301,7 +323,7 @@ class Application:
                     self.SCREEN.blit(self.silver_sprite, (x, y))
 
                 elif tile not in (1, 3, 4, 11, 12, 13):
-                    self.SCREEN.blit(self.item_sprites[key_from_value(self.item_codes, tile)], (x + 3, y + 3))
+                    self.SCREEN.blit(self.item_sprites[key_from_value(self.ITEM_CODES, tile)], (x + 3, y + 3))
 
             # Draw the scores and player names.
             text = ""
@@ -445,7 +467,7 @@ class Application:
                         knight.lose_life(1)
 
         # Check if all pellets are gone.
-        if self.item_codes["coin"] not in self.current_map:
+        if self.ITEM_CODES["coin"] not in self.current_map:
             self.game_paused = True
 
         # Check if all players have 0 hp.
@@ -546,9 +568,8 @@ class Application:
             self.mobile_collision_detection = False
 
         self.MOVEMENT_SPEED = self.SPEED_CONVERSIONS[self.option_boxes[0].option_list[self.option_boxes[0].selected]]
-
-        player_attribs_raw = [[box.text, self.skin_selector.skins[self.skin_selector.selected_skins[i]]] for i, box in
-                              enumerate(self.input_boxes[:-1])]
+        player_attribs_raw = [[box.text, *[self.KNIGHT_SKIN_NAMES
+                              [self.skin_selector.selected_skins[i]]]] for i, box in enumerate(self.input_boxes[:-1])]
         player_attribs = [attrib for attrib in player_attribs_raw if attrib[0] != ""]
 
         # Among us music and easter eggs
@@ -588,7 +609,7 @@ class Application:
             pygame.mixer.music.play(-1)
 
         self.init_dungeon(player_attribs, num_monsters,
-                          [random.choice(self.monster_skin_names), random.choice(self.monster_skin_names)],
+                          [random.choice(self.MONSTER_SKIN_NAMES), random.choice(self.MONSTER_SKIN_NAMES)],
                           self.among_us, self.rabbit_of_caerbannog)
 
         self.enter_dungeon_button.clicked = False
@@ -604,7 +625,6 @@ class Application:
             elif event.type == pygame.MOUSEBUTTONDOWN:
                 # Events for when the mouse is clicked/used.
                 self.cursor.click()
-                self.skin_selector.handle_mouse_click(pygame.mouse.get_pos())
 
             elif event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_RETURN:
@@ -624,6 +644,7 @@ class Application:
                     program_icon = pygame.image.load(f"lib\\sprites\\gui\\icon_{number}.png")
                     pygame.display.set_icon(program_icon)
 
+            self.skin_selector.handle_event(event)
             for box in self.input_boxes:
                 box.handle_event(event)
 

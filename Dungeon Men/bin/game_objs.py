@@ -10,8 +10,8 @@ class Heart(pygame.sprite.Sprite):
 
 
 class Knight(pygame.sprite.Sprite):
-    def __init__(self, screen, x, y, name, player_id, skin, wall_thickness, fps, knight_skins, dungeon_width,
-                 heart_spacing, alt_knight_skins, shield_heart, full_hearts, empty_heart):
+    def __init__(self, screen, x, y, name, player_id, skin, wall_thickness, fps, knight_skin, dungeon_width,
+                 heart_spacing, alt_knight_skin, shield_heart, heart_sprite, empty_heart):
         super().__init__()
 
         self.SCREEN = screen
@@ -34,15 +34,14 @@ class Knight(pygame.sprite.Sprite):
         self.y = self.WALL_THICKNESS * y + self.WALL_THICKNESS // 2
         self.mx = 0
         self.my = 0
-        self.knight_skins = knight_skins
-        self.alt_knight_skins = alt_knight_skins
+        self.alt_knight_skin = alt_knight_skin
         self.DUNGEON_WIDTH = dungeon_width
         self.HEART_SPACING = heart_spacing
         self.shield_heart = shield_heart
-        self.full_hearts = full_hearts
+        self.heart_sprite = heart_sprite
         self.empty_heart = empty_heart
 
-        self.sprite = knight_skins[self.skin]
+        self.sprite = knight_skin
         self.rect = self.sprite.get_rect()
         self.mask = pygame.mask.from_surface(self.sprite)
 
@@ -50,7 +49,7 @@ class Knight(pygame.sprite.Sprite):
         heart_positions = [(self.DUNGEON_WIDTH + self.WALL_THICKNESS + i * 30,
                             self.HEART_SPACING * (1 + 2 * (self.player_id - 1))) for i in range(self.hp)]
         for position in heart_positions:
-            self.hearts.add(Heart(position, self.full_hearts[self.skin]))
+            self.hearts.add(Heart(position, heart_sprite))
 
     def change_movement(self, x, y):
         # Change knight movement direction.
@@ -66,7 +65,6 @@ class Knight(pygame.sprite.Sprite):
         if self.retreat_countdown != 0 or self.shield_countdown != 0:
             # Calculate the circle's position and size relative to the character sprite
             circle_radius = max(half_rect_width, half_rect_height) + 5
-            circle_center = (self.x, self.y)
             circle_pos = (self.x - circle_radius - 2, self.y - circle_radius - 2)
 
             # Create a surface for the circle
@@ -83,8 +81,7 @@ class Knight(pygame.sprite.Sprite):
             self.update_hearts()
 
         if len(self.luck_effects) != 0:
-            self.SCREEN.blit(self.alt_knight_skins[self.skin],
-                             (self.x - half_rect_width - 2, self.y - half_rect_height - 2))
+            self.SCREEN.blit(self.alt_knight_skin, (self.x - half_rect_width - 2, self.y - half_rect_height - 2))
         else:
             self.SCREEN.blit(self.sprite, (self.x - half_rect_width - 2, self.y - half_rect_height - 2))
 
