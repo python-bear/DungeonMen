@@ -67,7 +67,7 @@ def reset_dungeon():
     knights = pygame.sprite.Group()
 
 
-def init_dungeon(player_ids, num_monsters, override_monster_skins=None, among_us=False):
+def init_dungeon(player_ids, num_monsters, override_monster_skins=None, among_us=False, rabbit_of_caerbannog=False):
     """
     Parameters
     ----------
@@ -75,6 +75,7 @@ def init_dungeon(player_ids, num_monsters, override_monster_skins=None, among_us
     num_monsters: The number of monsters to be in the dungeon.
     override_monster_skins: The skins that will be used for the monsters, if None, all will be used.
     among_us: Whether or not to do among us skins for enemies
+    rabbit_of_caerbannog: Whether or not to have the Rabbit of Caerbannog attack.
     """
     global knights, monsters, wall_sprite, penny_sprite, dungeon_theme, players, full_hearts, used_monster_skins, \
         game_paused, current_map
@@ -102,6 +103,9 @@ def init_dungeon(player_ids, num_monsters, override_monster_skins=None, among_us
     # Monster setup and creation.
     if override_monster_skins is None:
         used_monster_skins = monster_skin_names
+
+    elif rabbit_of_caerbannog:
+        used_monster_skins = ["rabbit_of_caerbannog"]
 
     else:
         used_monster_skins = override_monster_skins
@@ -304,7 +308,7 @@ def update_positions(do_mobile_collision_detection=True, do_wall_collision_detec
                 knight.rect.center = (knight.x, knight.y)
                 monster.rect.center = (monster.x, monster.y)
 
-                if pygame.sprite.collide_rect(knight, monster):
+                if pygame.sprite.collide_mask(knight, monster):
                     knight.lose_life(1)
 
     else:
@@ -402,7 +406,7 @@ def run_dungeon_frame():
 
 def start_menu_to_dungeon():
     global game_state, enter_dungeon_button, screen, program_icon, MOVEMENT_SPEED, speed_conversions, \
-        wall_collision_detection, mobile_collision_detection, banana_time
+        wall_collision_detection, mobile_collision_detection, banana_time, music_is_paused
 
     # Starts the dungeon/game
     try:
@@ -430,8 +434,8 @@ def start_menu_to_dungeon():
                           enumerate(input_boxes[:-1])]
     player_attribs = [attrib for attrib in player_attribs_raw if attrib[0] != ""]
 
-    # Among us music
-    banana_time = among_us = False
+    # Among us music and easter eggs
+    banana_time = among_us = rabbit_of_caerbannog = False
     for i in range(len(player_attribs)):
         if player_attribs[i][0].lower().strip() in ("sus", "sussy", "among", "bussy", "crew"):
             among_us = True
@@ -445,13 +449,27 @@ def start_menu_to_dungeon():
         elif player_attribs[i][0].lower().strip() in ("kirb", "kirby", "kobe"):
             player_attribs[i][1] = "kirb"
 
+        elif player_attribs[i][0].lower().strip() in ("ngor", "niga", "nigga", "niger"):
+            player_attribs[i][1] = "ngor"
+
+        elif player_attribs[i][0].lower().strip().replace("-", "") in ("gpt", "gpt3", "chat3", "ai"):
+            player_attribs[i][1] = "gpt"
+
+        elif player_attribs[i][0].lower().strip().replace("4", "a") == "spawn":
+            player_attribs[i][1] = "spawn"
+
+    if random.randint(0, 50) == 42:
+        rabbit_of_caerbannog = True
+        if music_is_paused:
+            play_video("lib\\videos\\Monty Python The Holy Grail - The killer bunny.mp4")
+
     if among_us:
         pygame.mixer.music.load("lib\\sounds\\music\\Hide n Seek Impostor.wav")
         pygame.mixer.music.set_volume(0.6)
         pygame.mixer.music.play(-1)
 
     init_dungeon(player_attribs, num_monsters, [random.choice(monster_skin_names), random.choice(monster_skin_names)],
-                 among_us)
+                 among_us, rabbit_of_caerbannog)
 
     enter_dungeon_button.clicked = False
     game_state = 'game'

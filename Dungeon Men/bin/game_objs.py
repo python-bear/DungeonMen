@@ -33,6 +33,7 @@ class Knight(pygame.sprite.Sprite):
 
         self.sprite = knight_skins[self.skin]
         self.rect = self.sprite.get_rect()
+        self.mask = pygame.mask.from_surface(self.sprite)
 
         self.hearts = pygame.sprite.Group()
         heart_positions = [(DUNGEON_WIDTH + WALL_THICKNESS + i * 30,
@@ -161,6 +162,7 @@ class Monster(pygame.sprite.Sprite):
 
         self.sprite = scale_image(load_img(f"lib\\sprites\\enemies\\{self.skin}.png"), CHAR_SIZE)
         self.rect = self.sprite.get_rect()
+        self.mask = pygame.mask.from_surface(self.sprite)
 
     def change_movement(self, x, y):
         # Change knight movement direction.
@@ -183,6 +185,9 @@ class Monster(pygame.sprite.Sprite):
                 self.speed_effects[i][0] -= 1
         for i in reversed(indices_to_remove):
             del self.speed_effects[i]
+
+        if self.skin == "rabbit_of_caerbannog":
+            self.speed = 3
 
     def draw(self):
         # Draws itself on the screen.

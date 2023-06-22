@@ -18,7 +18,8 @@ HALF_WALL_THICKNESS = WALL_THICKNESS // 2
 MAP_SIZE = 20
 MOVEMENT_SPEED = WALL_THICKNESS // 16
 CHAR_SIZE = 2.5
-HEART_SIZE = CHAR_SIZE + 0.5
+POSSIBLE_CHAR_SIZES = (1, 1.5, 2, 2.5)
+HEART_SIZE = 2.5 + 0.5
 HEART_SPACING = 78
 
 DUNGEON_WIDTH = MAP_SIZE * WALL_THICKNESS
@@ -212,6 +213,14 @@ def movement_options(movement_speed):
     return [(movement_speed, 0), (-movement_speed, 0), (0, movement_speed), (0, -movement_speed)]
 
 
+def play_video(file_path):
+    if os.name == 'nt':  # for Windows
+        os.startfile(file_path)
+
+    elif os.name == 'posix':  # for Linux/Mac OS
+        os.system(f'open "{file_path}"')
+
+
 class Wall(pygame.sprite.Sprite):
     def __init__(self, x, y):
         super().__init__()
@@ -231,7 +240,7 @@ wall_sprite = dungeon_theme = None
 fruit_names = ("apple", "beetroot", "cherries", "mushroom", "pumpkin", "radish", "gem")
 knight_skin_names = ("arch", "skul", "diab", "dom", "syth", "crud", "plag", "maji", "mega", "pink", "holy", "wrak",
                      "shov", "shy", "rusty")
-secret_knight_skin_names = ("andy", "kirb")
+secret_knight_skin_names = ("andy", "kirb", "ngor", "spawn", "gpt")
 monster_skin_names = ("behold", "chopper", "demo", "ender", "gruff", "lich", "neo", "orc", "robe", "spider", "zomb")
 empty_heart = scale_image(load_img(f"lib\\sprites\\hearts\\empty_heart.png"), HEART_SIZE)
 shield_heart = scale_image(load_img(f"lib\\sprites\\hearts\\shield_heart.png"), HEART_SIZE)
